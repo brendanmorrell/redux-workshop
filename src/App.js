@@ -9,7 +9,7 @@ import React, { Component } from 'react'
 // }
 
 const createStore = reducer => {
-  let currentState = {}
+  let currentState
   const listeners = []
 
   const getState = () => currentState
@@ -26,7 +26,7 @@ const createStore = reducer => {
   }
 
   const store = { getState, dispatch, subscribe }
-
+  dispatch({})
   return store
 }
 
@@ -50,14 +50,14 @@ const reducer = (state = initialState, action) => {
       return state
   }
 }
-const store = createStore(initialState, reducer)
+const store = createStore(reducer)
 
 const { dispatch, getState, subscribe } = store
+subscribe(() => console.log('ACTION FIRED'))
 
 class App extends Component {
   render() {
     const state = getState()
-    console.log('Current State: ', JSON.stringify(state))
     return (
       <div>
         {state.count}
