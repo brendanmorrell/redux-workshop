@@ -1,12 +1,31 @@
 import React, { Component } from 'react'
+import { Consumer } from '.'
 
-// const store = {
-//   state: {}, // state is an object
-//   listeners: [], // listeners are an array of functions
-//   dispatch: () => {}, // dispatch is a function
-//   subscribe: () => {}, // subscribe is a function
-//   getState: () => {}, // getState is a function
-// }
+//Action Constants
+const actions = { DECREMENT: 'DECREMENT', INCREMENT: 'INCREMENT' }
+
+// Action Creators
+export const decrement = () => ({ type: actions.DECREMENT })
+export const increment = () => ({ type: actions.INCREMENT })
+
+// Reducer
+const initialState = { count: 0 }
+const reducer = (state = initialState, action) => {
+  switch (action.type) {
+    case 'INCREMENT': {
+      const newState = { ...state, count: state.count + 1 }
+      console.log(newState)
+      return newState
+    }
+    case actions.DECREMENT: {
+      const newState = { ...state, count: state.count - 1 }
+      console.log(newState)
+      return newState
+    }
+    default:
+      return state
+  }
+}
 
 const createStore = reducer => {
   let currentState
@@ -17,7 +36,7 @@ const createStore = reducer => {
   const dispatch = action => {
     currentState = reducer(currentState, action)
     listeners.forEach(listener => listener())
-    // console.log('DISPATCH: ', JSON.stringify(action))
+    console.log('DISPATCH: ', JSON.stringify(action))
   }
 
   const subscribe = listener => {
@@ -30,42 +49,52 @@ const createStore = reducer => {
   return store
 }
 
-const actions = { DECREMENT: 'DECREMENT' }
-const decrement = () => ({ type: actions.DECREMENT })
+export const store = createStore(reducer)
 
-const initialState = { count: 0 }
-const reducer = (state = initialState, action) => {
-  switch (action.type) {
-    case 'INCREMENT': {
-      const newState = { ...state, count: state.count + 1 }
-      console.log('NEW STATE: ', JSON.stringify(newState))
-      return newState
-    }
-    case actions.DECREMENT: {
-      const newState = { ...state, count: state.count - 1 }
-      console.log('NEW STATE: ', JSON.stringify(newState))
-      return newState
-    }
-    default:
-      return state
+class ActualConnect extends Component {
+  componentDidMount = () => {
+    const { store } = this.props
+    store.subscribe(this.forceUpdate.bind(this))
   }
-}
-const store = createStore(reducer)
-
-const { dispatch, getState, subscribe } = store
-subscribe(() => console.log('ACTION FIRED'))
-
-class App extends Component {
   render() {
-    const state = getState()
-    return (
-      <div>
-        {state.count}
-        <button onClick={() => dispatch({ type: 'INCREMENT' })}>+</button>
-        <button onClick={() => dispatch(decrement())}>+</button>
-      </div>
-    )
+    const { children } = this.props
+    return <>{children}</>
   }
 }
 
-export default App
+const connect = (mstp, mdtp) => WrappedComponent => {
+  class Connect extends Component {
+    render() {
+      const { props } = this
+      return (
+        <Consumer>
+          {store => (
+            <ActualConnect store={store}>
+              <WrappedComponent {...mstp(store.getState())} {...mdtp(store.dispatch)} {...props} />
+            </ActualConnect>
+          )}
+        </Consumer>
+      )
+    }
+  }
+  return Connect
+}
+
+const App = ({ count, increment, decrement }) => (
+  <div>
+    <h1>Count: {count}</h1>
+    <button onClick={increment}>+</button>
+    <button onClick={decrement}>-</button>
+  </div>
+)
+
+const mstp = state => ({ count: state.count })
+const mdtp = dispatch => ({
+  increment: () => dispatch(increment()),
+  decrement: dispatch(decrement()),
+})
+
+export default connect(
+  mstp,
+  mdtp
+)(App)
